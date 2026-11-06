@@ -1,5 +1,5 @@
 // Offline-first app shell. The shell is saved at install time, so the app opens with no internet.
-const V = 'hisaab-v14';
+const V = 'hisaab-v15';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.png', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   self.skipWaiting();
