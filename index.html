@@ -334,32 +334,192 @@ sheet(esc(a[ncol(t)]),`<div class="grid"><div class="k"><small>Kul kharcha</smal
 <button class="p" onclick="cur='${mt}';newRow();edit['${fk}']='${esc(id)}';closeSh();tab='add';draw()">➕ Maintenance entry</button>${v?`<button class="p" onclick="cur='Transport_Fuel';newRow();edit.vehicle_id='${esc(id)}';autofill('vehicle_id');closeSh();tab='add';draw()">⛽ Petrol entry</button>`:""}<button class="p" style="background:var(--card);color:var(--tx);border:1px solid var(--bd)" onclick="editRow('${t}','${esc(id)}')">✏️ Details edit</button>
 <h2>Maintenance history</h2><div class="card">${M.slice(0,12).map(r=>`<div class="row"><div>${esc(nm("maintenance_detail_id",r.maintenance_detail_id)||nm("maintenance_category_id",r.maintenance_category_id)||"service")}<br><small>${String(r.service_date).slice(0,10)}${r.odometer_reading?" · "+r.odometer_reading+" km":""}${r.next_service_date?" · agli: "+r.next_service_date:""}</small></div><b>${f(r.amount)}</b></div>`).join("")||'<span class="mu">Abhi koi entry nahi.</span>'}</div>`)}
 /* ---- analysis ---- */
-function anaView(){if(!mUser)month=cm(td);const L=ledger(),I=income(),inm=x=>cm(x.d)===month,ex=L.filter(inm),sp=sum(ex),B=BG(),bt=btot(B),bc=catBud(B),ms=[5,4,3,2,1,0].map(k=>mAdd(month,-k)),dim=cdim(month),el=month===cm(td)?cel():dim,
-tr=ms.map(m=>({m,i:sum(I.filter(x=>cm(x.d)===m)),e:sum(L.filter(x=>cm(x.d)===m))})),cats=group(ex,"c"),cmx=Math.max(1,...cats.map(([c,a])=>Math.max(a,bc[c]||0))),dd=Array.from({length:dim},(_,i)=>sum(ex.filter(x=>doff(x.d,month)===i+1&&(!bt||inB(B,x))))),cum=[];dd.reduce((s,v,i)=>{cum[i]=i<el?s+v:null;return s+v},0);
-const H=(t,b,c)=>`<h2>${t}</h2><div class="card">${b||'<span class="mu">Data nahi.</span>'}${c?`<small class="mu">${c}</small>`:""}</div>`,dl=dd.map((_,i)=>i+1),top=cats.slice(0,7),rest=sum(cats.slice(7).map(x=>({a:x[1]}))),dn=rest?[...top,["Baqi",rest]]:top;
-const wd=Array(7).fill(0);ex.forEach(x=>wd[new Date(x.d+"T00:00:00").getDay()]+=x.a);
-const fu=R("Master_Vehicles").map(v=>({v,F:R("Transport_Fuel").filter(r=>r.vehicle_id==v.vehicle_id&&r.purchase_date).sort((a,b)=>String(a.purchase_date).localeCompare(b.purchase_date))})).filter(x=>x.F.length>1).map(({v,F})=>{const lb=F.map(r=>String(r.purchase_date).slice(5)),kp=F.map((r,i)=>i&&+r.odometer_reading>+F[i-1].odometer_reading&&+r.quantity_litres?(r.odometer_reading-F[i-1].odometer_reading)/r.quantity_litres:0);return`<b>${esc(v.vehicle_name)}</b> <small class="mu">petrol ka rate (Rs/L)</small>${lineC([{p:F.map(r=>+r.price_per_litre||null),c:"#f59e0b"}],lb,100)}<small class="mu">Mileage (km/L) har fill par</small>${barsC([{p:kp,c:"var(--ac)"}],lb,0,100)}`}).join("<hr>");
-const ut={},uq={};R("Utilities").forEach(r=>{const m=String(r.bill_date||r.payment_date).slice(0,7);if(ms.includes(m)){const k=ukey(r.utility_type),o=ut[k]=ut[k]||{},q=uq[k]=uq[k]||{};o[m]=(o[m]||0)+(+r.amount||0);q[m]=(q[m]||0)+(+r.consumption||0)}});
-const gp={};R("Grocery_Purchases").forEach(r=>{if(r.grocery_item_id&&+r.unit_price&&r.purchase_date)(gp[r.grocery_item_id]=gp[r.grocery_item_id]||[]).push(r)});
-const pc=Object.entries(gp).map(([k,a])=>{a.sort((x,y)=>String(x.purchase_date).localeCompare(y.purchase_date));const n=a.length;return n>1&&a[n-1].unit_id==a[n-2].unit_id?{n:nm("grocery_item_id",k),ch:(a[n-1].unit_price-a[n-2].unit_price)/a[n-2].unit_price*100,p:a[n-1].unit_price}:null}).filter(x=>x&&Math.abs(x.ch)>=5).sort((a,b)=>Math.abs(b.ch)-Math.abs(a.ch)).slice(0,6);
-const gi=group(R("Grocery_Purchases").filter(r=>cm(String(r.purchase_date).slice(0,10))===month).map(r=>({n:nm("grocery_item_id",r.grocery_item_id),a:+r.total_amount||r.quantity*r.unit_price||0})),"n").slice(0,6);
-const sg={};ex.forEach(x=>{const k=x.c+" › "+x.s,o=sg[k]=sg[k]||{n:0,a:0};o.n++;o.a+=x.a});const lk=Object.entries(sg).filter(([k,v])=>v.n>=5).sort((a,b)=>b[1].a-a[1].a).slice(0,5);
-const an=ex.filter(x=>{const h=L.filter(y=>y!==x&&y.c===x.c&&y.s===x.s);if(h.length<5)return false;const mu=sum(h)/h.length,sd=Math.sqrt(h.reduce((a,y)=>a+(y.a-mu)**2,0)/h.length);return x.a>mu+2*sd&&x.a>mu*1.5}).slice(0,5);
-return`<h1>Analysis</h1>${monthPick()}
-${H("🏁 Budget raftar (cumulative)",sp?lineC([{p:cum,c:"var(--er)"},...(bt?[{p:dl.map(d=>bt*d/dim),c:"var(--mu)",d:1,dots:false}]:[])],dl):"","Laal line = aap ka kharcha. Dotted = budget ki seedhi raftar. Laal line dotted se upar ho to budget se aage chal rahe hain. (Budget set ho to sirf budget wali cheezon ka kharcha gina jata hai.)")}
-${H("🍩 Kharcha kahan gaya",sp?`<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${donut(dn)}<div style="flex:1;min-width:150px">${leg(dn)}</div></div>`:"")}
-${H("🎯 Category vs Budget",cats.map(([c,a])=>hb(esc(c),bc[c]===undefined||B.bud[c]!==undefined?a:sum(ex.filter(x=>x.c===c&&inB(B,x))),bc[c],cmx)).join(""),"Kaali line = budget. Sirf laal (budget cross) aur narangi (80% se zyada) wali categories highlight hoti hain.")}
-${H("📈 6 mahine: Income vs Kharcha",barsC([{p:tr.map(x=>x.i),c:"var(--ok)"},{p:tr.map(x=>x.e),c:"var(--er)"}],tr.map(x=>x.m.slice(5)))+tr.map(x=>`<div class="row"><span>${x.m}</span><small>${f(x.i)} − ${f(x.e)}</small><b class="${x.i-x.e<0?"er":"ok"}">${f(x.i-x.e)}</b></div>`).join(""),"Hara = income, laal = kharcha.")}
-${H("💹 Bachat % (mahina-ba-mahina)",barsC([{p:tr.map(x=>x.i?Math.max(0,Math.round((x.i-x.e)/x.i*100)):0),c:"#6366f1"}],tr.map(x=>x.m.slice(5)),B.target),`Dotted line = aap ka target (${B.target}%).`)}
-${H("📅 Rozana kharcha",sp?barsC([{p:dd,c:v=>bt&&v>bt/dim?"var(--er)":"var(--ac)"}],dl,bt?bt/dim:0):"","Dotted = rozana budget. Laal bar = us din limit se zyada.")}
-${H("📆 Haftay ke din",sp?barsC([{p:wd,c:"#0ea5e9"}],["Itw","Peer","Mang","Budh","Jum.r","Jumma","Hafta"]):"")}
-${H("💳 Payment method",sp?`<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${donut(group(ex,"p"))}<div style="flex:1;min-width:150px">${leg(group(ex,"p"))}</div></div>`:"")}
-${H("⛽ Gaari: petrol rate aur mileage",fu)}
-${H("💡 Utilities (mahana bill)",Object.entries(ut).map(([k,o])=>{const q=uq[k],has=ms.some(m=>q[m]>0),lm=[...ms].reverse().find(m=>q[m]>0&&o[m]);return`<b>${ue(k)} ${esc(k)}</b> <small class="mu">bill (Rs)</small>${barsC([{p:ms.map(m=>o[m]||0),c:"#6366f1"}],ms.map(m=>m.slice(5)),0,80)}${has?`<small class="mu">Istemal (${esc(utc(k)?.l||"usage")})</small>${barsC([{p:ms.map(m=>q[m]||0),c:"#0ea5e9"}],ms.map(m=>m.slice(5)),0,80)}${lm?`<small class="mu">Aakhri qeemat: <b>${f(o[lm]/q[lm])}</b> per unit</small>`:""}`:""}`}).join("<hr>"),"Bill aur istemal dono dikhte hain; qeemat per unit = bill ÷ istemal.")}
-${H("🛒 Grocery: rate mein farq",pc.map(x=>`<div class="row"><span>${esc(x.n)}</span><b class="${x.ch>0?"er":"ok"}">${x.ch>0?"🔺":"🔻"} ${Math.abs(x.ch).toFixed(0)}% <small>(ab ${f(x.p)})</small></b></div>`).join("")+gi.map(([k,a])=>`<div class="row"><span>${esc(k)}</span><b>${f(a)}</b></div>`).join(""),"Pehle wale hisse mein rate 5% se zyada badla; neeche is mahine ka sab se zyada kharcha.")}
-${H("🔁 Baar baar wale kharchay",lk.map(([k,v])=>`<div class="row"><div>${esc(k)}<br><small>${v.n} baar · har baar ~${f(v.a/v.n)}</small></div><b>${f(v.a)}</b></div>`).join(""),"Chhoti baar baar ki kharidari jama ho kar bara kharcha ban jati hai.")}
-${an.length?`<h2>🕵️ Ghair mamooli kharchay</h2>${an.map(x=>`<div class="in warn"><span>🕵️</span><div><b>${f(x.a)}</b> ${esc(x.ds||x.s)} (${x.d}) — ${esc(x.s)} mein aam kharcha is se bohat kam hota hai.</div></div>`).join("")}`:""}
-${H("🏆 Top 8 kharchay",[...ex].sort((a,b)=>b.a-a.a).slice(0,8).map(x=>`<div class="row"><div>${ico(x.c,24)}${esc(x.ds||x.s)}<br><small>${x.d} · ${esc(x.c)}</small></div><b>${f(x.a)}</b></div>`).join(""))}`}
+function anaView(){
+if(!mUser)month=cm(td);
+const L=ledger(),I=income(),inm=x=>cm(x.d)===month;
+const ex=L.filter(inm),sp=sum(ex);
+const inc=sum(I.filter(inm));
+const B=BG(),bt=btot(B),bc=catBud(B);
+const ms=[5,4,3,2,1,0].map(k=>mAdd(month,-k));
+const dim=cdim(month),el=month===cm(td)?cel():dim;
+const isC=month===cm(td);
+const rem=bt-bspent(B,ex);
+const proj=el? (bspent(B,ex)/el)*dim : (bt?bt:sp);
+const safe=isC&&rem>0&&(dim-el+1)>0 ? rem/(dim-el+1) : 0;
+const savPct=inc?Math.round((inc-sp)/inc*100):null;
+const tr=ms.map(m=>({m,i:sum(I.filter(x=>cm(x.d)===m)),e:sum(L.filter(x=>cm(x.d)===m))}));
+const prev=tr[tr.length-2]||{i:0,e:0};
+const cats=group(ex,"c");
+const cmx=Math.max(1,...cats.map(([c,a])=>Math.max(a,bc[c]||0)),1);
+// Daily series (only budgeted if budget exists, else all)
+const dd=Array.from({length:dim},(_,i)=>sum(ex.filter(x=>doff(x.d,month)===i+1&&(!bt||inB(B,x)))));
+const cum=[];dd.reduce((s,v,i)=>{cum[i]=i<el?s+v:null;return s+v},0);
+const dl=dd.map((_,i)=>i+1);
+// Weekday
+const wd=Array(7).fill(0);ex.forEach(x=>{const d=new Date(x.d+"T12:00:00");if(!isNaN(d))wd[d.getDay()]+=x.a});
+// Donut top 6 + baqi
+const top=cats.slice(0,6),rest=sum(cats.slice(6).map(x=>({a:x[1]}))),dn=rest>0?[...top,["Baqi",rest]]:top;
+// Fuel
+const fu=R("Master_Vehicles").map(v=>{
+  const F=R("Transport_Fuel").filter(r=>r.vehicle_id==v.vehicle_id&&r.purchase_date).sort((a,b)=>String(a.purchase_date).localeCompare(b.purchase_date));
+  if(F.length<2)return null;
+  const lb=F.map(r=>String(r.purchase_date).slice(5));
+  const rates=F.map(r=>+r.price_per_litre||null);
+  const kp=F.map((r,i)=>i&&+r.odometer_reading>+F[i-1].odometer_reading&&+r.quantity_litres?(r.odometer_reading-F[i-1].odometer_reading)/r.quantity_litres:null);
+  return `<b>${esc(v.vehicle_name)}</b>
+  <small class="mu">Petrol rate (Rs/L)</small>${lineC([{p:rates,c:"#f59e0b"}],lb,90)}
+  <small class="mu">Mileage (km/L) har fill</small>${barsC([{p:kp.map(v=>v||0),c:"var(--ac)"}],lb,0,90)}`;
+}).filter(Boolean).join("<hr>")||'<span class="mu">Kam az kam 2 petrol entries chahiye.</span>';
+// Utilities
+const ut={},uq={};
+R("Utilities").forEach(r=>{
+  const m=String(r.bill_date||r.payment_date||"").slice(0,7);
+  if(!ms.includes(m))return;
+  const k=ukey(r.utility_type);
+  (ut[k]=ut[k]||{})[m]=(ut[k][m]||0)+(+r.amount||0);
+  (uq[k]=uq[k]||{})[m]=(uq[k][m]||0)+(+r.consumption||0);
+});
+// Grocery price changes (last 2 same-unit purchases)
+const gp={};
+R("Grocery_Purchases").forEach(r=>{
+  if(r.grocery_item_id&&+r.unit_price&&r.purchase_date)
+    (gp[r.grocery_item_id]=gp[r.grocery_item_id]||[]).push(r);
+});
+const pc=Object.entries(gp).map(([k,a])=>{
+  a.sort((x,y)=>String(x.purchase_date).localeCompare(y.purchase_date));
+  const n=a.length;
+  if(n<2||a[n-1].unit_id!=a[n-2].unit_id||!(+a[n-2].unit_price>0))return null;
+  const ch=((a[n-1].unit_price-a[n-2].unit_price)/a[n-2].unit_price)*100;
+  return Math.abs(ch)>=5?{n:nm("grocery_item_id",k),ch,p:+a[n-1].unit_price}:null;
+}).filter(Boolean).sort((a,b)=>Math.abs(b.ch)-Math.abs(a.ch)).slice(0,6);
+const gi=group(R("Grocery_Purchases").filter(r=>cm(String(r.purchase_date||"").slice(0,10))===month)
+  .map(r=>({n:nm("grocery_item_id",r.grocery_item_id)||"Item",a:+r.total_amount||(+r.quantity||0)*(+r.unit_price||0)})),"n").slice(0,6);
+// Repeat expenses
+const sg={};ex.forEach(x=>{const k=x.c+" › "+x.s;const o=sg[k]=sg[k]||{n:0,a:0};o.n++;o.a+=x.a});
+const lk=Object.entries(sg).filter(([,v])=>v.n>=4).sort((a,b)=>b[1].a-a[1].a).slice(0,6);
+// Anomalies (same sub-cat history, robust)
+const an=ex.filter(x=>{
+  const h=L.filter(y=>y!==x&&y.c===x.c&&y.s===x.s&&y.a>0);
+  if(h.length<4)return false;
+  const mu=sum(h)/h.length;
+  if(mu<=0)return false;
+  const sd=Math.sqrt(h.reduce((s,y)=>s+(y.a-mu)**2,0)/h.length)||0;
+  return x.a>mu+2*sd && x.a>mu*1.6;
+}).sort((a,b)=>b.a-a.a).slice(0,5);
+
+// ---- Practical insights ----
+const tips=[];
+const addT=(icon,cls,html)=>tips.push(`<div class="in ${cls}"><span>${icon}</span><div>${html}</div></div>`);
+if(inc>0){
+  const ok=savPct>= (B.target||20);
+  addT(ok?"🎯":"💡",ok?"good":"warn",`Bachat <b>${savPct}%</b> (target ${B.target||20}%). ${ok?"Shabash — target cross ho gaya.":"Target tak pahunchne ke liye mahine ke baqi din thoda control rakhein."}`);
+}
+if(isC&&bt&&el>=3){
+  const over=proj>bt;
+  addT(over?"⚠️":"✅",over?"bad":"good",`Is raftar se mahine ke end tak ~<b>${f(proj)}</b> ${over?`(budget se ${f(proj-bt)} zyada)`:"— budget ke andar"}.`);
+}
+if(isC&&safe>0) addT("📅","","Aaj se rozana safe limit: <b>"+f(safe)+"</b> (is se zyada to budget tight ho sakta hai).");
+if(prev.e>0){
+  const ch=pct(sp-prev.e,prev.e);
+  addT(sp>prev.e?"📈":"📉","",`Pichle mahine se kharcha <b>${Math.abs(ch)}% ${sp>prev.e?"zyada":"kam"}</b> (${f(prev.e)} → ${f(sp)}).`);
+}
+if(lk.length){
+  const totR=lk.reduce((s,[,v])=>s+v.a,0);
+  addT("🔁","warn",`Baar-baar ke kharche is mahine <b>${f(totR)}</b> hain. Inko thoda kam karne se cash flow seedha behtar hoga.`);
+}
+if(pc.filter(x=>x.ch>0).length){
+  addT("🛒","",`Kuch grocery items ke rate badh gaye hain. Alternative brand / bulk try karke bachat nikal sakte hain.`);
+}
+if(!bt) addT("🎯","warn",`Abhi budget set nahi. Setup → Meri budget list se important categories par limit lagayein — control aasan ho jata hai.`);
+
+const H=(t,b,c)=>`<h2>${t}</h2><div class="card">${b||'<span class="mu">Data nahi.</span>'}${c?`<small class="mu">${c}</small>`:""}</div>`;
+
+// Status class for hero
+const cls=!bt?"none":rem<0?"bad":(sp>=.8*bt||proj>bt)?"warn":"good";
+
+return `${monthPick()}
+<div class="hero ${cls}">
+  <small>${bt?"💰 Budget mein bacha":"Is mahine ka net"}</small>
+  <div class="big">${bt?(rem<0?"-":"")+f(Math.abs(rem)):f(inc-sp)}</div>
+  ${bt?`<div class="hb"><i style="width:${Math.min(100,pct(bspent(B,ex),bt))}%"></i></div>
+  <small>Budget ${f(bt)} · Budget wale kharche ${f(bspent(B,ex))}</small>`:""}
+  <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:13px">
+    <div><small>Income</small><b style="display:block">${f(inc)}</b></div>
+    <div><small>Kharcha</small><b style="display:block">${f(sp)}</b></div>
+    <div><small>Bachat %</small><b style="display:block">${savPct!==null?savPct+"%":"—"}</b></div>
+  </div>
+  ${safe?`<div style="margin-top:8px;background:rgba(255,255,255,.2);border-radius:10px;padding:6px"><small>Rozana safe limit: <b>${f(safe)}</b></small></div>`:""}
+</div>
+
+${tips.length?`<h2>💡 Cash-flow insights</h2>${tips.join("")}`:""}
+
+${H("🏁 Budget raftar (cumulative)",
+  sp?lineC([
+    {p:cum,c:"var(--er)"},
+    ...(bt?[{p:dl.map(d=>bt*d/dim),c:"var(--mu)",d:1,dots:false}]:[])
+  ],dl):"",
+  "Laal line = aapka kharcha (budget wali cheezein agar budget set hai). Dotted = budget ki seedhi raftar. Laal upar = aage chal rahe hain.")}
+
+${H("🍩 Paisa kahan gaya",
+  sp?`<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${donut(dn)}<div style="flex:1;min-width:140px">${leg(dn)}</div></div>`:"")}
+
+${H("🎯 Category vs Budget",
+  cats.length?cats.map(([c,a])=>{
+    const bud=bc[c];
+    const spentInB=bud!==undefined?sum(ex.filter(x=>x.c===c&&inB(B,x))):a;
+    return hb(esc(c),spentInB,bud,cmx);
+  }).join(""):"",
+  "Kaali line = budget. Sirf un categories ko highlight kiya jata hai jahan 80%+ ya cross hua.")}
+
+${H("📈 6 mahine: Income vs Kharcha",
+  barsC([{p:tr.map(x=>x.i),c:"var(--ok)"},{p:tr.map(x=>x.e),c:"var(--er)"}],tr.map(x=>x.m.slice(5)))+
+  tr.map(x=>`<div class="row"><span>${x.m}</span><small>${f(x.i)} − ${f(x.e)}</small><b class="${x.i-x.e<0?"er":"ok"}">${f(x.i-x.e)}</b></div>`).join(""),
+  "Hara = income, laal = kharcha. Neeche net bachat/deficit.")}
+
+${H("💹 Bachat % (mahina-ba-mahina)",
+  barsC([{p:tr.map(x=>x.i?Math.max(0,Math.round((x.i-x.e)/x.i*100)):0),c:"#6366f1"}],tr.map(x=>x.m.slice(5)),B.target||20),
+  `Dotted line = aapka target (${B.target||20}%).`)}
+
+${H("📅 Rozana kharcha",
+  sp?barsC([{p:dd,c:v=>bt&&v>bt/dim?"var(--er)":"var(--ac)"}],dl,bt?bt/dim:0):"",
+  "Dotted = rozana budget. Laal bar = us din limit se zyada.")}
+
+${H("📆 Haftay ke din",
+  sp?barsC([{p:wd,c:"#0ea5e9"}],["Itw","Peer","Mang","Budh","Jum.r","Jumma","Hafta"]):"",
+  "Kaunse din zyada kharcha hota hai — us din thoda hoshiyar rehna faida dega.")}
+
+${H("💳 Payment method",
+  sp?`<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${donut(group(ex,"p"))}<div style="flex:1;min-width:140px">${leg(group(ex,"p"))}</div></div>`:"")}
+
+${H("⛽ Gaari: petrol rate & mileage",fu)}
+
+${H("💡 Utilities (mahana bill)",
+  Object.keys(ut).length?Object.entries(ut).map(([k,o])=>{
+    const q=uq[k]||{};
+    const has=ms.some(m=>q[m]>0);
+    const lm=[...ms].reverse().find(m=>q[m]>0&&o[m]);
+    return `<b>${ue(k)} ${esc(k)}</b>
+    <small class="mu">Bill (Rs)</small>${barsC([{p:ms.map(m=>o[m]||0),c:"#6366f1"}],ms.map(m=>m.slice(5)),0,80)}
+    ${has?`<small class="mu">Istemal (${esc(utc(k)?.l||"usage")})</small>${barsC([{p:ms.map(m=>q[m]||0),c:"#0ea5e9"}],ms.map(m=>m.slice(5)),0,80)}
+    ${lm&&q[lm]?`<small class="mu">Aakhri qeemat: <b>${f(o[lm]/q[lm])}</b> / unit</small>`:""}`:""}`;
+  }).join("<hr>"):"",
+  "Bill aur istemal dono. Qeemat/unit = bill ÷ istemal.")}
+
+${H("🛒 Grocery: rate mein farq",
+  (pc.length?pc.map(x=>`<div class="row"><span>${esc(x.n)}</span><b class="${x.ch>0?"er":"ok"}">${x.ch>0?"🔺":"🔻"} ${Math.abs(x.ch).toFixed(0)}% <small>(ab ${f(x.p)})</small></b></div>`).join(""):"")+
+  (gi.length?`<div style="margin-top:8px"><small class="mu">Is mahine sab se zyada kharcha:</small>${gi.map(([k,a])=>`<div class="row"><span>${esc(k)}</span><b>${f(a)}</b></div>`).join("")}</div>`:""),
+  "Pehle hisse mein rate 5%+ badla; neeche is mahine ke top items.")}
+
+${H("🔁 Baar-baar wale kharchay",
+  lk.map(([k,v])=>`<div class="row"><div>${esc(k)}<br><small>${v.n} baar · avg ${f(v.a/v.n)}</small></div><b>${f(v.a)}</b></div>`).join(""),
+  "Chhoti baar-baar ki cheezein jama hokar bara kharcha ban jati hain. In par nazar rakhna cash-flow behtar karta hai.")}
+
+${an.length?`<h2>🕵️ Ghair-mamooli kharchay</h2>${an.map(x=>`<div class="in warn"><span>🕵️</span><div><b>${f(x.a)}</b> — ${esc(x.ds||x.s)} (${x.d})<br><small>${esc(x.c)} › ${esc(x.s)} ka aam level is se kaafi kam rehta hai</small></div></div>`).join("")}`:""}
+
+${H("🏆 Top 8 kharchay",
+  [...ex].sort((a,b)=>b.a-a.a).slice(0,8).map(x=>`<div class="row"><div>${ico(x.c,24)}${esc(x.ds||x.s)}<br><small>${x.d} · ${esc(x.c)}</small></div><b>${f(x.a)}</b></div>`).join(""))}
+`;
+}
 function guide(){const A=(t,b,o)=>`<details class="acc" ${o?"open":""}><summary>${t}</summary>${b}</details>`,F=(x,e)=>`<span class="fm">${x}</span>${e?`<p class="ex">${e}</p>`:""}`,P=(n,t,b)=>`<div class="stp"><i>${n}</i><div><b>${t}</b><br><small class="mu">${b}</small></div></div>`;
 return`<div class="gh"><h1>❓ Guide</h1><div style="opacity:.92">Is app ko istemal karna aur har number ka matlab — sab yahan hai.</div></div>
 <h2>🚀 3 minute mein shuru</h2><div class="card">${P(1,"Entry tab kholein","Upar 3 bare buttons: 🧾 Kharcha · 💰 Income · 📝 Shopping list. Kharcha par tap karein: pehle category (ya upar search box mein naam likhein), phir sub-category, phir sahi form khud khulta hai (Petrol par petrol ka form, Bijli par bill ka).")}${P(2,"Chips tap karein, type kam","Amount, rate, description aur tareekh ke neeche jo chips aate hain wo aap ki purani entries se bante hain. Bas tap karein.")}${P(3,"Save karein","Save par aaj ka kharcha aur streak nazar aati hai. Galti ho to 5 second ke andar <b>Undo</b> dabayein.")}</div>
